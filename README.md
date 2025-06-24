@@ -1,50 +1,52 @@
 # 🎬 Movie Recommendation System
 
-A **two-stage** recommendation engine combining FAISS-based recall with LightGBM re-ranking to deliver high-quality movie suggestions.
+![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)
+![License: CC0 1.0](https://img.shields.io/badge/license-CC0%201.0-lightgrey.svg)
+![Status: production‑ready](https://img.shields.io/badge/status-production--ready-brightgreen)
+
+A **two‑stage** movie recommender that first recalls candidates with FAISS (ALS + content hybrids) and then re‑ranks them with a LightGBM LambdaRank model.
+
+---
 
 ## 🔍 Pipeline Overview
 
 1. **Candidate Generation**
-
-   - **Collaborative Filtering (ALS)** produces user/item latent factors.
-   - **Content Hybrids** use TF-IDF → SVD → FAISS index for cold-start recall.
-
-2. **Re-ranking**
-
-   - **Feature Engineering** creates rich interaction-level features for each candidate set.
-   - **LambdaRank (LightGBM)** orders the top-K list by predicted relevance.
+   • **ALS collaborative filtering** — captures user–item latent factors.
+   • **TF‑IDF → SVD hybrids** — covers cold‑start items, indexed with **FAISS**.
+2. **Re‑ranking**
+   • Feature engineering on (user, item) pairs.
+   • **LightGBM LambdaRank** scores each candidate list.
 
 ---
 
-## 📂 Repository Structure
+## 📂 Repository Structure (key bits)
 
-```
+```text
 movie-recommender/
-├─ src/                          # Core pipeline scripts
-│   ├─ 00_prepare_dataset.py     # Ingest & clean raw CSVs
-│   ├─ 01_build_mf.py            # Train ALS; save factors & mappings
-│   ├─ 02_vectorize.py           # Build & save TF-IDF + SVD pipelines
-│   ├─ 03_index.py               # Build FAISS index
-│   ├─ 04_faiss_recall.py        # Recall top-N candidates
-│   ├─ 05_build_features.py      # Generate LightGBM feature tables
-│   └─ 06_train_lgbm.py          # Train LambdaRank model
+├─ src/
+│   ├─ 00_prepare_dataset.py    # clean raw CSVs
+│   ├─ 01_build_mf.py           # train ALS
+│   ├─ 02_vectorize.py          # TF‑IDF + SVD
+│   ├─ 03_index.py              # build FAISS index
+│   ├─ 04_faiss_recall.py       # recall candidates
+│   ├─ 05_build_features.py     # LightGBM feature tables
+│   ├─ 06_train_lgbm.py         # train LambdaRank
+│   └─ 07_eval_lgbm.py          # MAP/NDCG evaluation
 │
 ├─ data/
-│   ├─ raw/                      # Original CSVs (movies.csv, ratings.csv, links.csv, credits.csv)
-│   ├─ processed/                # Cleaned & mapped artifacts (.csv, .npy, .parquet)
-│   ├─ tmp/                      # Splits: train/valid ratings (.csv)
-│   └─ features/                 # Final LightGBM tables (.parquet)
-│
+│   ├─ raw/         # place original MovieLens CSV here
+│   ├─ tmp/         # train/valid splits
+│   ├─ processed/   # cleaned artefacts
+│   └─ features/    # LightGBM matrices
 ├─ models/                      # Saved artefacts & model files
 │   ├─ als_model.npz            # ALS factors
 │   ├─ mf_mappings.json         # ID mappings
 │   ├─ tfidf_vectorizer.pkl
 │   ├─ svd_transformer.pkl
 │   ├─ knn_hybrid.faiss
-│   └─ lgb_ranker.txt           # LambdaRank model
+│   └─ lgb_ranker.txt           # LambdaRank models
 │
 ├─ requirements.txt             # Python dependencies
-├─ LICENSE                      # CC0 1.0
 └─ README.md                    # This file
 ```
 
@@ -52,81 +54,85 @@ movie-recommender/
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
-- **Python**: 3.13
-- **pip** or **poetry**
-
-### Installation
+### 1. Install
 
 ```bash
-git clone https://github.com/your-org/movie-recommender.git
-cd movie-recommender
+git clone https://github.com/atharva-m/movie-recommendation-system-v2.git
+cd movie-recommendation-system-v2
 pip install -r requirements.txt
 ```
 
-### Data Preparation
+### 2. Data
 
-1. Place the following CSV files into `data/raw/`:
-   - `movies.csv`, `ratings.csv`, `links.csv`, `credits.csv`
-2. Run the prep script:
-   ```bash
-   python src/00_prepare_dataset.py \
-     --raw-dir data/raw \
-     --out-processed data/processed \
-     --out-tmp data/tmp
-   ```
+* Download **`ratings.csv`** from **MovieLens‑32M**: [https://grouplens.org/datasets/movielens/32m/](https://grouplens.org/datasets/movielens/32m/).
+  Unzip the archive and place **`ratings.csv`** inside `data/raw/`.
 
-### Full Pipeline
+### 3. End‑to‑End Commands
 
 ```bash
-# 1️⃣ Collaborative filter
-python src/01_build_mf.py --input data/processed/movies_processed.csv \
-    --ratings data/tmp/train_ratings.csv \
-    --output models/als_model.npz \
-    --mappings models/mf_mappings.json
+# 0️⃣  create raw/ and drop TMDB + MovieLens CSVs inside
+python src/00_prepare_dataset.py
 
-# 2️⃣ Content indexing
-python src/02_vectorize.py --movies data/processed/movies_processed.csv \
-    --out-tfidf models/tfidf_vectorizer.pkl \
-    --out-svd models/svd_transformer.pkl
-python src/03_index.py --tfidf models/tfidf_vectorizer.pkl \
-    --svd models/svd_transformer.pkl \
-    --out-index models/knn_hybrid.faiss
+# 1️⃣  collaborative filter
+python src/01_build_mf.py
 
-# 3️⃣ Recall candidates (train & valid)
-python src/04_faiss_recall.py --index models/knn_hybrid.faiss \
-    --ratings data/tmp/train_ratings.csv \
-    --out data/processed/candidates_train.parquet
-# repeat for valid set
+# 2️⃣  content vectors + FAISS index
+python src/02_vectorize.py
+python src/03_index.py
 
-# 4️⃣ Feature engineering
-python src/05_build_features.py --ratings data/tmp/train_ratings.csv \
-    --candidates data/processed/candidates_train.parquet \
-    --out data/features/train_lgb.parquet
-# repeat for valid set
+# 3️⃣  candidate recall (run twice: train & valid)
+python src/04_faiss_recall.py \
+       --seen data/tmp/train_ratings.csv \
+       --output data/processed/candidates_train.parquet
+python src/04_faiss_recall.py \
+       --seen data/tmp/valid_ratings.csv \
+       --output data/processed/candidates_valid.parquet
 
-# 5️⃣ Train LambdaRank model
-python src/06_train_lgbm.py --train data/features/train_lgb.parquet \
-    --valid data/features/valid_lgb.parquet \
-    --output models/lgb_ranker.txt
+# 4️⃣  supervised feature rows
+python src/05_build_features.py --set train \
+        --ratings     data/tmp/train_ratings.csv \
+        --candidates  data/processed/candidates_train.parquet \
+        --out-train   data/features/train_lgb.parquet
+python src/05_build_features.py --set valid \
+        --ratings     data/tmp/valid_ratings.csv \
+        --candidates  data/processed/candidates_valid.parquet \
+        --out-train   data/features/valid_lgb.parquet
+
+# 5️⃣  LambdaRank re‑ranker
+python src/06_train_lgbm.py
+
+# 6️⃣  evaluate recommendations
+python src/07_eval_lgbm.py \
+        --features data/features/valid_lgb.parquet \
+        --model    models/lgb_ranker.txt \
+        --k 10
 ```
 
 ---
 
-## ⚙️ Configuration & Tips
+## 📈 Offline Metrics
 
-- **Paths & hyperparameters** can be overridden via CLI flags in each script.
-- **Cache** large artefacts with DVC or `.gitignore` folders: `data/tmp/`, `data/features/`, `models/`.
-- **Automate** with Airflow, Step Functions, or CI pipelines for retraining and deployment.
+* **MAP\@10:** 0.6490
+* **NDCG\@10:** 0.7582  *(optimised target)*
+
+### Why prefer NDCG on MovieLens‑32M?
+
+MovieLens‑32M contains **many multi‑positive sessions** (users rate dozens of movies).  **MAP** treats all relevant items equally, ignoring their rank positions once they appear within the top‑k list.  **NDCG**, however, applies a logarithmic discount—rewarding systems that surface the *most* relevant (high‑rated) movies *earlier* in the list.  This better reflects real‑world UX where users are likelier to click the first few tiles rather than scroll through ten suggestions.
+
+---
+
+## ⏱️ Runtime
+
+The full pipeline runs **CPU-only** in under **15 minutes** end-to-end.
 
 ---
 
 ## 📝 License
 
-This work is dedicated to the public domain under [CC0 1.0 Universal](http://creativecommons.org/publicdomain/zero/1.0/).
+Released into the public domain under [CC0 1.0 Universal](http://creativecommons.org/publicdomain/zero/1.0/).
 
 ---
 
-*Happy recommending!*
+### Contact
 
+Atharva Mokashi · atharvamokashi01@gmail.com · [LinkedIn](https://www.linkedin.com/in/atharva-m)
