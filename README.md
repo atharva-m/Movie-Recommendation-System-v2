@@ -1,7 +1,3 @@
-&#x20;&#x20;
-
----
-
 # 🎬 Movie Recommendation System
 
 A **two-stage** recommendation engine combining FAISS-based recall with LightGBM re-ranking to deliver high-quality movie suggestions.
