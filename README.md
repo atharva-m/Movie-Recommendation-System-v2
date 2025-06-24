@@ -13,7 +13,7 @@ A **two‑stage** movie recommender that first recalls candidates with FAISS (AL
 1. **Candidate Generation**
    • **ALS collaborative filtering** — captures user–item latent factors.
    • **TF‑IDF → SVD hybrids** — covers cold‑start items, indexed with **FAISS**.
-2. **Re‑ranking**
+3. **Re‑ranking**
    • Feature engineering on (user, item) pairs.
    • **LightGBM LambdaRank** scores each candidate list.
 
