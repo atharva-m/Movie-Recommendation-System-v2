@@ -1,35 +1,23 @@
-#!/usr/bin/env python3
 # ────────────────────────────────────────────────────────────────
 # index.py — build & save a FAISS index for the hybrid vectors
-#
-#   # CPU (default)
+# ________________________________________________________________
+# example:
 #   python src/index.py \
-#       --features  models/X_hybrid.npy \
-#       --index     models/knn_hybrid.faiss \
-#       --metric    cosine
+#          --features  models/X_hybrid.npy \
+#          --index     models/knn_hybrid.faiss \
+#          --metric    cosine
 # ────────────────────────────────────────────────────────────────
-
 import argparse
 from pathlib import Path
 import numpy as np
 import faiss
-
 
 # ────────────────────────────────────────────────────────────────
 # helpers
 # ────────────────────────────────────────────────────────────────
 def build_index(x: np.ndarray, metric: str = "cosine"):
     """
-    Build a *CPU* FAISS index.
-
-    Parameters
-    ----------
-    x       : np.ndarray, shape (n_items, dim), float32, already L2-normalised.
-    metric  : {"cosine","ip","l2"}   (cosine ↔ inner-product on unit vectors)
-
-    Returns
-    -------
-    faiss.Index
+    Build a *CPU* FAISS index
     """
     dim = x.shape[1]
     if metric.lower() in {"cosine", "ip"}:
@@ -78,6 +66,6 @@ def main() -> None:
     faiss.write_index(cpu_index, str(args.index))
     print(f"Saved FAISS index → {args.index}")
 
-
+# ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     main()
