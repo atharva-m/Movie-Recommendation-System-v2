@@ -1,18 +1,26 @@
-#!/usr/bin/env python3
 # ────────────────────────────────────────────────────────────────
 # faiss_recall.py — MF candidate recall  +  optional content merge
+# ────────────────────────────────────────────────────────────────
+# example:
+#   python src/04_faiss_recall.py \
+#          --seen data/tmp/train_ratings.csv \
+#          --output data/processed/candidates_train.parquet
+#
+#   python src/04_faiss_recall.py \
+#          --seen data/tmp/valid_ratings.csv \
+#          --output data/processed/candidates_valid.parquet
 # ────────────────────────────────────────────────────────────────
 import argparse, json
 from pathlib import Path
 from typing  import List, Dict, Tuple
-
 import numpy as np
 import pandas as pd
 import faiss
 from tqdm import tqdm
 
-
-# ─────────────────────────── utilities ──────────────────────────
+# ────────────────────────────────────────────────────────────────
+# utilities
+# ────────────────────────────────────────────────────────────────
 def load_als(als_path: str) -> Tuple[np.ndarray, np.ndarray]:
     """Return (user_factors, item_factors) as float32."""
     data = np.load(als_path)
@@ -33,11 +41,7 @@ def mask_seen(cand: np.ndarray, seen: set) -> np.ndarray:
     return np.asarray(keep, dtype=np.int64)
 
 
-def recall_mf(u_row: int,
-              U: np.ndarray,
-              idx_mf: faiss.Index,
-              R: int,
-              seen: set) -> np.ndarray:
+def recall_mf(u_row: int, U: np.ndarray, idx_mf: faiss.Index, R: int, seen: set) -> np.ndarray:
     """Top-R MF rows (row-indices!), never in *seen*."""
     q = U[u_row:u_row + 1].copy()
     faiss.normalize_L2(q)
@@ -45,12 +49,7 @@ def recall_mf(u_row: int,
     return mask_seen(rows[0], seen)[:R]                     # row indices
 
 
-def merge_lists(mf: np.ndarray,
-                ct: np.ndarray,
-                how: str,
-                w_mf: float,
-                w_ct: float,
-                R: int) -> np.ndarray:
+def merge_lists(mf: np.ndarray, ct: np.ndarray, how: str, w_mf: float, w_ct: float, R: int) -> np.ndarray:
     """Union / interleave / weighted blend of two ranked lists."""
     if how == "union":
         out = list(mf) + [x for x in ct if x not in mf]
@@ -83,7 +82,9 @@ def merge_lists(mf: np.ndarray,
     raise ValueError("merge strategy not recognised")
 
 
-# ─────────────────────────── main routine ───────────────────────
+# ────────────────────────────────────────────────────────────────
+# main
+# ────────────────────────────────────────────────────────────────
 def main() -> None:
     p = argparse.ArgumentParser(description="ALS-based recall → candidate parquet")
     p.add_argument("--als",    default="models/als_model.npz")
@@ -159,7 +160,6 @@ def main() -> None:
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     out_df.to_parquet(args.output, index=False)
     print(f"→ saved {len(out_df):,} users  to  {args.output}")
-
 
 # ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
