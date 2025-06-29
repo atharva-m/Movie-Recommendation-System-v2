@@ -14,11 +14,10 @@
 #  ✓ no user appears in both splits
 #  ✓ all columns required by downstream scripts are present
 # ---------------------------------------------------------------------------
-import argparse, json, ast, re
-from collections import Counter, defaultdict
+import argparse, json, ast
+from collections import Counter
 from pathlib import Path
 from typing import List
-
 import numpy as np
 import pandas as pd
 import spacy
