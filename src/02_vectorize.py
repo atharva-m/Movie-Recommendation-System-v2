@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # ────────────────────────────────────────────────────────────────
 # vectorize.py ― build hybrid item-vectors  (tag-SVD ⊕ lang ⊕ runtime [⊕ year])
 # ────────────────────────────────────────────────────────────────
@@ -12,9 +11,8 @@
 #          --svd_dim    400                 \
 #          --add-year   10                  # optional decade feature
 # ────────────────────────────────────────────────────────────────
-import argparse, json, math
+import argparse, json
 from pathlib import Path
-
 import joblib
 import numpy as np
 import pandas as pd
@@ -22,26 +20,15 @@ from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import normalize
 
-
 # ─────────────────────────── helpers ────────────────────────────
-def fit_tfidf(docs,
-              min_df=3,
-              max_features=20_000,
-              ngram_range=(1, 2),
-              stop_words="english"):
-    vec = TfidfVectorizer(min_df=min_df,
-                          max_features=max_features,
-                          ngram_range=ngram_range,
-                          stop_words=stop_words,
-                          lowercase=True)
+def fit_tfidf(docs, min_df=3, max_features=20_000, ngram_range=(1, 2), stop_words="english"):
+    vec = TfidfVectorizer(min_df=min_df, max_features=max_features, ngram_range=ngram_range, stop_words=stop_words, lowercase=True)
     X = vec.fit_transform(docs)
     return X, vec
 
 
 def apply_svd(X, n_components=200, random_state=42):
-    svd = TruncatedSVD(n_components=n_components,
-                       algorithm="randomized",
-                       random_state=random_state)
+    svd = TruncatedSVD(n_components=n_components, algorithm="randomized", random_state=random_state)
     X_red = svd.fit_transform(X).astype("float32")
     return X_red, svd
 
@@ -143,6 +130,6 @@ def main() -> None:
     np.save(args.out, X_hybrid)
     print(f"feature matrix shape={X_hybrid.shape}  →  {args.out}")
 
-
+# ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     main()
